@@ -1,10 +1,11 @@
-﻿using Smartwyre.DeveloperTest.Types;
+﻿using Monads;
+using Smartwyre.DeveloperTest.Types;
 
 namespace Smartwyre.DeveloperTest.Data;
 
 public class RebateDataStore
 {
-    public Rebate GetRebate(string rebateIdentifier)
+    public Maybe<Rebate> GetRebate(string rebateIdentifier)
     {
         // Access database to retrieve account, code removed for brevity 
         return new Rebate();
