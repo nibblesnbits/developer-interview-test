@@ -5,4 +5,8 @@
 	<TargetFramework>net7.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Smartwyre.DeveloperTest\Smartwyre.DeveloperTest.csproj" />
+    <ProjectReference Include="..\Monads\Monads.csproj" />
+  </ItemGroup>
 </Project>

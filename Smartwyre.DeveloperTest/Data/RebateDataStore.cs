@@ -5,14 +5,20 @@ namespace Smartwyre.DeveloperTest.Data;
 
 public class RebateDataStore
 {
-    public Maybe<Rebate> GetRebate(string rebateIdentifier)
+    public virtual Maybe<Rebate> GetRebate(string rebateIdentifier)
     {
         // Access database to retrieve account, code removed for brevity 
         return new Rebate();
     }
 
-    public void StoreCalculationResult(Rebate account, decimal rebateAmount)
+    public virtual Rebate StoreCalculationResult(Rebate account, decimal rebateAmount)
     {
-        // Update account in database, code removed for brevity
+        return new Rebate
+        {
+            Amount = rebateAmount,
+            Identifier = account.Identifier,
+            Incentive = account.Incentive,
+            Percentage = account.Percentage
+        };
     }
 }

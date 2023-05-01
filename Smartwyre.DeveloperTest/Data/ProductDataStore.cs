@@ -5,7 +5,7 @@ namespace Smartwyre.DeveloperTest.Data;
 
 public class ProductDataStore
 {
-    public Maybe<Product> GetProduct(string productIdentifier)
+    public virtual Maybe<Product> GetProduct(string productIdentifier)
     {
         // Access database to retrieve account, code removed for brevity 
         return new Product();

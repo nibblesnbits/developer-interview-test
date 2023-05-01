@@ -7,6 +7,11 @@ using System.Threading.Tasks;
 
 namespace Monads;
 
+public static class Maybe
+{
+    public static Maybe<T> Bind<T>(T? item) => new Maybe<T>(item);
+}
+
 /// <summary>
 /// Represents a monad wrapping an optional value
 /// </summary>
@@ -216,6 +221,9 @@ public sealed class Maybe<T> : IEquatable<T>, IEquatable<Maybe<T>>
         return HasValue ? Value.GetHashCode() : default;
     }
 
+    /// <summary>
+    /// Determines whether the specified <typeparamref name="T"/> instances are considered equal.
+    /// </summary>
     public bool Equals(T other)
     {
         return
@@ -460,5 +468,139 @@ public static partial class MaybeExtensions
 
         var result = source.WithValues().Select(m => m.Value);
         return result;
+    }
+}
+
+public sealed class Either<TLeft, TRight> where TLeft : notnull where TRight : notnull
+{
+
+    private readonly Maybe<TLeft> _left;
+    private readonly Maybe<TRight> _right;
+
+    private Either([NotNull] TLeft left)
+    {
+        _left = left;
+        _right = Maybe<TRight>.Empty;
+    }
+
+    private Either([NotNull] TRight right)
+    {
+        _left = Maybe<TLeft>.Empty;
+        _right = right;
+    }
+
+    [return: NotNull]
+    public TResult Match<TResult>(Func<TLeft, TResult> left, Func<TRight, TResult> right) where TResult : notnull
+    {
+        return _left.Match(() => right(_right.Value), left);
+    }
+
+    public static implicit operator Either<TLeft, TRight>(TLeft val)
+    {
+        return new Either<TLeft, TRight>(val);
+    }
+    public static implicit operator Either<TLeft, TRight>(TRight val)
+    {
+        return new Either<TLeft, TRight>(val);
+    }
+}
+
+public static class Try
+{
+    public static Try<TResult> Create<TResult>([NotNull] Func<Either<Exception, TResult>> @try) where TResult : notnull
+    {
+        try
+        {
+            return new Try<TResult>(@try());
+        }
+        catch (Exception e)
+        {
+            return new Try<TResult>(e);
+        }
+    }
+
+    public static Try<TResult> Create<T1, TResult>([NotNull] Func<T1, Either<Exception, TResult>> @try, T1 arg1) where TResult : notnull
+    {
+        try
+        {
+            return new Try<TResult>(@try(arg1));
+        }
+        catch (Exception e)
+        {
+            return new Try<TResult>(e);
+        }
+    }
+
+    public static Try<TResult> Create<T1, T2, TResult>([NotNull] Func<T1, T2, Either<Exception, TResult>> @try, T1 arg1, T2 arg2) where TResult : notnull
+    {
+        try
+        {
+            return new Try<TResult>(@try(arg1, arg2));
+        }
+        catch (Exception e)
+        {
+            return new Try<TResult>(e);
+        }
+    }
+
+    public static Try<TResult> Create<T1, T2, T3, TResult>([NotNull] Func<T1, T2, T3, Either<Exception, TResult>> @try, T1 arg1, T2 arg2, T3 arg3) where TResult : notnull
+    {
+        try
+        {
+            return new Try<TResult>(@try(arg1, arg2, arg3));
+        }
+        catch (Exception e)
+        {
+            return new Try<TResult>(e);
+        }
+    }
+}
+
+public sealed class Try<T> where T : notnull
+{
+    internal readonly Either<Exception, T> _result;
+
+    internal Try([NotNull] Either<Exception, T> result)
+    {
+        _result = result ?? throw new ArgumentNullException(nameof(result));
+    }
+
+    public Try<TResult> Select<TResult>([NotNull] Func<T, TResult> func) where TResult : notnull
+    {
+        if (func is null)
+        {
+            throw new ArgumentNullException(nameof(func));
+        }
+
+        return _result.Match(
+            e => Try.Create<TResult>(() => e),
+            result => Try.Create<TResult>(() => func(result)));
+    }
+
+    public Try<TResult> SelectMany<TResult>([NotNull] Func<T, Try<TResult>> func) where TResult : notnull
+    {
+        if (func is null)
+        {
+            throw new ArgumentNullException(nameof(func));
+        }
+
+        return _result.Match(
+            e => Try.Create<TResult>(() => e),
+            result => func(result));
+    }
+
+    public TResult Match<TResult>(Func<T, TResult> right, Func<Exception, TResult> left)
+    {
+        if (right is null)
+        {
+            throw new ArgumentNullException(nameof(right));
+        }
+
+        if (left is null)
+        {
+            throw new ArgumentNullException(nameof(left));
+        }
+
+        return _result.Match(left, right);
     }
 }
