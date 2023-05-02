@@ -8,6 +8,10 @@ public class ProductDataStore
     public virtual Maybe<Product> GetProduct(string productIdentifier)
     {
         // Access database to retrieve account, code removed for brevity 
-        return new Product();
+        return new Product
+        {
+            Identifier = productIdentifier,
+            SupportedIncentives = IncentiveType.FixedCashAmount
+        };
     }
 }

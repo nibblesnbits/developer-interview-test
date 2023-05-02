@@ -20,12 +20,7 @@ public class PaymentServiceTests
         {
             SupportedIncentives = IncentiveType.FixedCashAmount
         });
-        rebateDataStore.Setup(x => x.GetRebate(It.IsAny<string>())).Returns(new Rebate
-        {
-            Amount = 10,
-            Incentive = IncentiveType.FixedCashAmount,
-            Percentage = 10
-        });
+        rebateDataStore.Setup(x => x.GetRebate(It.IsAny<string>())).Returns(new Rebate("test", IncentiveType.FixedCashAmount, 10, 10));
         var sut = new OldRebateService(rebateDataStore.Object, productDataStoreMock.Object);
         var result = sut.Calculate(new CalculateRebateRequest
         {
@@ -33,7 +28,7 @@ public class PaymentServiceTests
             RebateIdentifier = "test",
             Volume = 0
         });
-        Assert.Equal(result.Success, CalculateRebateResult.Failed.Success);
+        Assert.Equal(result.Success, CalculateRebateResult.Succeeded.Success);
     }
     [Fact]
     public void RebateService_Returns_The_Same_Result_As_OldRebateService()
@@ -48,19 +43,14 @@ public class PaymentServiceTests
             SupportedIncentives = IncentiveType.FixedCashAmount
         };
         productDataStoreMock.Setup(x => x.GetProduct(It.IsAny<string>())).Returns(product);
-        var rebate = new Rebate
-        {
-            Identifier = "test",
-            Amount = 10,
-            Incentive = IncentiveType.FixedCashAmount,
-            Percentage = 10
-        };
-
-        newRebateDataStore.Setup(x => x.GetRebate(It.IsAny<string>())).Returns(rebate);
+        var rebate = new Rebate("test", IncentiveType.FixedCashAmount, 10, 10);
         oldRebateDataStore.Setup(x => x.GetRebate(It.IsAny<string>())).Returns(rebate);
+        decimal oldRebateAmount = 0m;
+        oldRebateDataStore.Setup(x => x.StoreCalculationResult(It.IsAny<Rebate>(), It.IsAny<decimal>())).Callback<Rebate, decimal>((_, d) => oldRebateAmount = d).Returns(rebate);
 
-        decimal rebateAmount = 0m;
-        newRebateDataStore.Setup(x => x.StoreCalculationResult(It.IsAny<Rebate>(), It.IsAny<decimal>())).Callback<Rebate, decimal>((_, d) => rebateAmount = d);
+        decimal newRebateAmount = 0m;
+        newRebateDataStore.Setup(x => x.GetRebate(It.IsAny<string>())).Returns(rebate);
+        newRebateDataStore.Setup(x => x.StoreCalculationResult(It.IsAny<Rebate>(), It.IsAny<decimal>())).Callback<Rebate, decimal>((_, d) => newRebateAmount = d).Returns(rebate);
 
 
         var oldOne = new OldRebateService(newRebateDataStore.Object, productDataStoreMock.Object);
@@ -73,11 +63,11 @@ public class PaymentServiceTests
         };
         var oldResult = oldOne.Calculate(request); // calls StoreCalculationResult() directly
 
-        var newResult = sut.Calculate(request).Match(() => Try.Create<Rebate>(() => new Exception()), amount =>
-            Try.Create<Rebate>(() => newRebateDataStore.Object.StoreCalculationResult(rebate, amount))).Match(r => r.Amount, e => 0m);
-
+        var newResult = sut.ProcessRebateRequest(request).Match(() => 0, r => r.Amount);
+        Assert.Equal(rebate.Amount, newResult);
+        Assert.Equal(oldRebateAmount, newRebateAmount);
         newRebateDataStore.Verify(x => x.StoreCalculationResult(rebate, newResult), Times.Once());
-        oldRebateDataStore.Verify(x => x.StoreCalculationResult(rebate, rebateAmount), Times.Once());
+        oldRebateDataStore.Verify(x => x.StoreCalculationResult(rebate, newRebateAmount), Times.Once());
 
     }
 }

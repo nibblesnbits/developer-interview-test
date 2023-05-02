@@ -15,26 +15,31 @@ public class RebateService : IRebateService
         _productDataStore = productDataStore;
     }
 
-    private decimal GetRebateAmount(CalculateRebateRequest request, Rebate rebate, Product product)
+    private Maybe<decimal> GetRebateAmount(CalculateRebateRequest request, Rebate rebate, Product product)
     {
         if (!product.SupportedIncentives.HasFlag(rebate.Incentive))
         {
-            return 0;
+            return Maybe<decimal>.Empty;
         }
         return rebate switch
         {
             { Incentive: var i, Amount: var a } when i == IncentiveType.FixedCashAmount && rebate.Amount != 0 => rebate.Amount,
             { Incentive: var i, Percentage: var p } when i == IncentiveType.FixedRateRebate && (p != 0 || product.Price != 0 || request.Volume != 0) => product.Price * p * request.Volume,
             { Incentive: var i, Amount: var a } when i == IncentiveType.AmountPerUom && (a != 0 || request.Volume != 0) => a * request.Volume,
-            _ => 0
+            _ => Maybe<decimal>.Empty
         };
     }
 
-    public Maybe<decimal> Calculate(CalculateRebateRequest request)
+    public Maybe<Rebate> ProcessRebateRequest(CalculateRebateRequest request)
     {
+        // get the rebate by identifier
         var rebateAmount = _rebateDataStore.GetRebate(request.RebateIdentifier)
+            // if the rebate exists, get the product
             .SelectMany((rebate) => _productDataStore.GetProduct(request.ProductIdentifier),
-                (r, p) => GetRebateAmount(request, r, p));
+            // if the product exists, get the rebate amount
+            (rebate, product) => GetRebateAmount(request, rebate, product).Match(rebate,
+            // if there is a rebate, store the calculation result and return the new rebate record
+            (amount) => _rebateDataStore.StoreCalculationResult(rebate, amount)));
 
         return rebateAmount;
     }

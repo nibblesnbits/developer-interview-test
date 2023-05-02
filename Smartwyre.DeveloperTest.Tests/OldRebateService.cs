@@ -15,8 +15,10 @@ public class OldRebateService
     public CalculateRebateResult Calculate(CalculateRebateRequest request)
     {
         // yeah, this is cheating
-        Rebate rebate = _rebateDataStore.GetRebate(request.RebateIdentifier).Match(new Rebate(), r => r);
-        Product product = _productDataStore.GetProduct(request.ProductIdentifier).Match(new Product(), p => p);
+        Rebate rebate = _rebateDataStore.GetRebate(request.RebateIdentifier)
+            .Match(new Rebate("error", IncentiveType.AmountPerUom, 0, 0), r => r);
+        Product product = _productDataStore.GetProduct(request.ProductIdentifier)
+            .Match(new Product { Identifier = "error" }, p => p);
 
         var result = new CalculateRebateResult();
 

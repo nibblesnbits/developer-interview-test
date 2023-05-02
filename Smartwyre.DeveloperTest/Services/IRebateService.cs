@@ -5,5 +5,5 @@ namespace Smartwyre.DeveloperTest.Services;
 
 public interface IRebateService
 {
-    Maybe<decimal> Calculate(CalculateRebateRequest request);
+    Maybe<Rebate> ProcessRebateRequest(CalculateRebateRequest request);
 }
